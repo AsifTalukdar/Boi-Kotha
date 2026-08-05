@@ -1,0 +1,7 @@
+"use client";
+
+import {CoverArt} from "./BookCard";
+import {Icon} from "./Icon";
+import {usePlayer} from "./PlayerContext";
+
+export function AudioPlayer(){const{currentBook,isPlaying,progress,speed,toggle,setProgress,cycleSpeed}=usePlayer();if(!currentBook)return null;return <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--line)] bg-[#fffaf4]/95 px-4 py-3 shadow-[0_-10px_35px_rgba(91,53,32,.08)] backdrop-blur-md sm:px-6"><div className="mx-auto flex max-w-[1440px] items-center gap-3 sm:gap-6"><div className="hidden sm:block"><CoverArt book={currentBook} small/></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{currentBook.title}</p><p className="truncate text-xs text-[var(--muted)]">{currentBook.narrator} · অধ্যায় ৩</p></div><button type="button" onClick={toggle} className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--maroon)] text-white"><Icon name={isPlaying?"pause":"play"} size={17}/></button><div className="hidden w-[30%] items-center gap-3 md:flex"><span className="text-[11px] text-[var(--muted)]">১৪:২২</span><input aria-label="অডিও অগ্রগতি" type="range" min="0" max="100" value={progress} onChange={event=>setProgress(Number(event.target.value))} className="audio-range"/><span className="text-[11px] text-[var(--muted)]">৪২:১০</span></div><button type="button" onClick={cycleSpeed} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--muted)]">{speed}</button></div></div>}
