@@ -1,14 +1,35 @@
 import { createClient } from "./server";
 import { Book } from "../data";
+import { formatDurationLong } from "../format";
 
-export type BookWithRecordings = Book & { recordings: any[] };
+export type RecordingRow = {
+  id: string;
+  book_id: string;
+  narrator_id: string;
+  storage_path: string | null;
+  duration_seconds: number | null;
+  status: "pending" | "approved" | "rejected";
+  narrator: { display_name: string | null } | null;
+};
+
+export type BookWithRecordings = Book & { recordings: RecordingRow[] };
+
+const recordingsSelect = `
+  id,
+  book_id,
+  narrator_id,
+  storage_path,
+  duration_seconds,
+  status,
+  narrator:profiles!recordings_narrator_id_fkey ( display_name )
+`;
 
 function mapBook(row: any): BookWithRecordings {
   const genre = row.genres && row.genres.length > 0 ? row.genres[0].name_bn : "অজানা";
-  const recordings = row.recordings || [];
-  
-  // Pick default recording for BookCard display, if any exist
-  const defaultRec = recordings.length > 0 ? recordings[0] : null;
+  const recordings: RecordingRow[] = row.recordings || [];
+
+  // Prefer an approved recording for the card/hero display; fall back to whatever is visible.
+  const defaultRec = recordings.find((recording) => recording.status === "approved") ?? recordings[0] ?? null;
 
   return {
     id: row.id, // The ID from DB, which is a UUID
@@ -18,9 +39,9 @@ function mapBook(row: any): BookWithRecordings {
     cover: row.cover_color,
     accent: "", // Or provide a fallback if needed
     genre: genre,
-    duration: defaultRec ? defaultRec.duration_bn || defaultRec.duration || "অজানা" : "কোনো অডিও নেই",
-    narrator: defaultRec ? defaultRec.narrator_name_bn || defaultRec.narrator_name || "অজানা" : "কেউ নেই",
-    recordings: recordings
+    duration: defaultRec ? formatDurationLong(defaultRec.duration_seconds) : "কোনো অডিও নেই",
+    narrator: defaultRec?.narrator?.display_name ?? "কেউ নেই",
+    recordings: recordings,
   };
 }
 
@@ -35,7 +56,7 @@ export async function getBooks(): Promise<BookWithRecordings[]> {
         name_bn
       ),
       recordings (
-        *
+        ${recordingsSelect}
       )
     `);
 
@@ -60,7 +81,7 @@ export async function getBooksByGenre(genreSlug: string): Promise<BookWithRecord
         name_bn
       ),
       recordings (
-        *
+        ${recordingsSelect}
       )
     `)
     .eq("genres.slug", genreSlug);
@@ -84,7 +105,7 @@ export async function getBookById(id: string): Promise<BookWithRecordings | null
         name_bn
       ),
       recordings (
-        *
+        ${recordingsSelect}
       )
     `)
     .eq("id", id)
@@ -96,6 +117,24 @@ export async function getBookById(id: string): Promise<BookWithRecordings | null
   }
 
   return data ? mapBook(data) : null;
+}
+
+export type UploadableBook = { id: string; title: string; author: string };
+
+/** Lightweight book list for the narrator upload picker (no recordings join needed). */
+export async function getBooksForUpload(): Promise<UploadableBook[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("books")
+    .select("id,title_bn,author_bn")
+    .order("title_bn");
+
+  if (error) {
+    console.error("Error fetching books for upload:", error);
+    return [];
+  }
+
+  return data.map((row) => ({ id: row.id, title: row.title_bn, author: row.author_bn }));
 }
 
 export async function getGenres() {

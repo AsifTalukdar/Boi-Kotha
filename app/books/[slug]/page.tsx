@@ -1,14 +1,73 @@
 import Link from "next/link";
-import {notFound} from "next/navigation";
-import {CoverArt} from "@/components/BookCard";
-import {ListenButton} from "@/components/ListenButton";
+import { notFound } from "next/navigation";
+import { CoverArt } from "@/components/BookCard";
+import { ListenButton } from "@/components/ListenButton";
 import { getBookById } from "@/lib/supabase/queries";
 
-export default async function BookDetailPage({params}:{params:Promise<{slug:string}>}){
-  const{slug}=await params;
-  const book=await getBookById(slug);
-  if(!book)notFound();
-  const hasRecordings = book.recordings && book.recordings.length > 0;
+export default async function BookDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const book = await getBookById(slug);
+  if (!book) notFound();
 
-  return <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8"><Link href="/" className="mb-8 inline-block text-xs font-bold text-[var(--muted)]">← লাইব্রেরিতে ফিরুন</Link><section className="grid gap-8 lg:grid-cols-[260px_1fr] lg:gap-12"><div><CoverArt book={book}/>{hasRecordings?<ListenButton book={book}/>:<div className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--maroon)]/40 py-3 text-sm font-bold text-white/80 cursor-not-allowed">অডিও নেই</div>}</div><div className="pt-2"><span className="rounded-full bg-[#eadccf] px-3 py-1 text-[10px] font-bold text-[var(--maroon)]">{book.genre}</span><h1 className="serif mt-4 text-4xl font-bold leading-tight sm:text-5xl">{book.title}</h1><p className="mt-3 text-base font-bold text-[var(--maroon)]">{book.author}</p><p className="mt-6 max-w-2xl text-sm leading-7 text-[var(--muted)]">{book.description} এই কালজয়ী রচনাটি নতুন প্রজন্মের শ্রোতাদের জন্য আবারও কণ্ঠে তুলে ধরেছেন আমাদের কমিউনিটির ন্যারেটররা।</p><div className="mt-8 flex gap-6 border-t border-[var(--line)] pt-5 text-xs text-[var(--muted)]"><span><b className="block text-lg text-[var(--ink)]">১২.৪k</b>শ্রোতা</span><span><b className="block text-lg text-[var(--ink)]">৪.৯</b>রেটিং</span><span><b className="block text-lg text-[var(--ink)]">{book.duration}</b>সময়</span></div></div></section><section className="mt-14 max-w-3xl"><p className="eyebrow">কণ্ঠ বেছে নিন</p><h2 className="serif mt-2 text-2xl font-bold">এই বইটি শুনছেন যারা</h2>{hasRecordings?<div className="mt-5 space-y-3">{book.recordings.map(recording=>{const name=recording.narrator_name_bn||recording.narrator_name||"অজানা";return <div key={recording.id} className="flex items-center gap-4 rounded-2xl border border-[var(--line)] bg-[var(--cream)] p-4"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#bd8a61] text-xs font-bold text-white">{name.slice(0,2)}</div><div className="min-w-0 flex-1"><p className="text-sm font-bold">{name}</p></div><ListenButton book={{...book,narrator:name}} compact/></div>})}</div>:<div className="mt-5 flex flex-col items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--cream)] p-10 text-center text-[var(--muted)]"><p className="text-sm font-bold">এই বইটির এখনো কোনো কণ্ঠাভিনয় নেই</p><p className="mt-2 text-xs">খুব শিগগিরই আমাদের কমিউনিটি ন্যারেটররা এটি কণ্ঠে তুলে ধরবেন।</p></div>}</section></div>
+  const playableRecordings = book.recordings.filter((recording) => recording.storage_path);
+  const hasRecordings = playableRecordings.length > 0;
+  const heroRecording = playableRecordings[0];
+
+  return (
+    <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
+      <Link href="/" className="mb-8 inline-block text-xs font-bold text-[var(--muted)]">← লাইব্রেরিতে ফিরুন</Link>
+      <section className="grid gap-8 lg:grid-cols-[260px_1fr] lg:gap-12">
+        <div>
+          <CoverArt book={book} />
+          {hasRecordings ? (
+            <ListenButton
+              book={book}
+              recordingId={heroRecording.id}
+              narratorName={heroRecording.narrator?.display_name ?? "অজানা"}
+            />
+          ) : (
+            <div className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--maroon)]/40 py-3 text-sm font-bold text-white/80 cursor-not-allowed">
+              অডিও নেই
+            </div>
+          )}
+        </div>
+        <div className="pt-2">
+          <span className="rounded-full bg-[#eadccf] px-3 py-1 text-[10px] font-bold text-[var(--maroon)]">{book.genre}</span>
+          <h1 className="serif mt-4 text-4xl font-bold leading-tight sm:text-5xl">{book.title}</h1>
+          <p className="mt-3 text-base font-bold text-[var(--maroon)]">{book.author}</p>
+          <p className="mt-6 max-w-2xl text-sm leading-7 text-[var(--muted)]">
+            {book.description} এই কালজয়ী রচনাটি নতুন প্রজন্মের শ্রোতাদের জন্য আবারও কণ্ঠে তুলে ধরেছেন আমাদের কমিউনিটির ন্যারেটররা।
+          </p>
+          <div className="mt-8 flex gap-6 border-t border-[var(--line)] pt-5 text-xs text-[var(--muted)]">
+            <span><b className="block text-lg text-[var(--ink)]">১২.৪k</b>শ্রোতা</span>
+            <span><b className="block text-lg text-[var(--ink)]">৪.৯</b>রেটিং</span>
+            <span><b className="block text-lg text-[var(--ink)]">{book.duration}</b>সময়</span>
+          </div>
+        </div>
+      </section>
+      <section className="mt-14 max-w-3xl">
+        <p className="eyebrow">কণ্ঠ বেছে নিন</p>
+        <h2 className="serif mt-2 text-2xl font-bold">এই বইটি শুনছেন যারা</h2>
+        {hasRecordings ? (
+          <div className="mt-5 space-y-3">
+            {playableRecordings.map((recording) => {
+              const name = recording.narrator?.display_name ?? "অজানা";
+              return (
+                <div key={recording.id} className="flex items-center gap-4 rounded-2xl border border-[var(--line)] bg-[var(--cream)] p-4">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#bd8a61] text-xs font-bold text-white">{name.slice(0, 2)}</div>
+                  <div className="min-w-0 flex-1"><p className="text-sm font-bold">{name}</p></div>
+                  <ListenButton book={book} recordingId={recording.id} narratorName={name} compact />
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mt-5 flex flex-col items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--cream)] p-10 text-center text-[var(--muted)]">
+            <p className="text-sm font-bold">এই বইটির এখনো কোনো কণ্ঠাভিনয় নেই</p>
+            <p className="mt-2 text-xs">খুব শিগগিরই আমাদের কমিউনিটি ন্যারেটররা এটি কণ্ঠে তুলে ধরবেন।</p>
+          </div>
+        )}
+      </section>
+    </div>
+  );
 }

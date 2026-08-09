@@ -2,34 +2,102 @@
 
 import Link from "next/link";
 import { ChangeEvent, DragEvent, useState } from "react";
-import { requests } from "@/lib/data";
+import { createClient } from "@/lib/supabase/client";
+import type { UploadableBook } from "@/lib/supabase/queries";
 import { Icon } from "./Icon";
 
-const steps = ["বই বা বিষয়", "স্বত্ব ঘোষণা", "অডিও আপলোড", "নিশ্চিতকরণ"];
-type UploadMode = "request" | "manual";
+const steps = ["বই বেছে নিন", "স্বত্ব ঘোষণা", "অডিও আপলোড", "নিশ্চিতকরণ"];
+type UploadMode = "book" | "manual";
 type CopyrightStatus = "public-domain" | "original" | "permission";
 
-export function UploadStepper() {
- const [step, setStep] = useState(1);
- const [mode, setMode] = useState<UploadMode>("request");
- const [selectedRequest, setSelectedRequest] = useState("");
- const [copyrightStatus, setCopyrightStatus] = useState<CopyrightStatus | "">("");
- const [manualTitle, setManualTitle] = useState("");
- const [audioName, setAudioName] = useState("");
- const [proofName, setProofName] = useState("");
+function readAudioDuration(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const audio = new Audio();
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () => {
+      resolve(Number.isFinite(audio.duration) ? audio.duration : null);
+      URL.revokeObjectURL(url);
+    };
+    audio.onerror = () => {
+      resolve(null);
+      URL.revokeObjectURL(url);
+    };
+    audio.src = url;
+  });
+}
 
- const canContinue = step === 1
-  ? mode === "request" ? Boolean(selectedRequest) : Boolean(manualTitle.trim())
+export function UploadStepper({ books }: { books: UploadableBook[] }) {
+ const [step, setStep] = useState(1);
+ const [mode, setMode] = useState<UploadMode>("book");
+ const [selectedBookId, setSelectedBookId] = useState("");
+ const [copyrightStatus, setCopyrightStatus] = useState<CopyrightStatus | "">("");
+ const [proofName, setProofName] = useState("");
+ const [audioFile, setAudioFile] = useState<File | null>(null);
+ const [uploading, setUploading] = useState(false);
+ const [uploadError, setUploadError] = useState("");
+
+ const canContinue = uploading ? false : step === 1
+  ? mode === "book" ? Boolean(selectedBookId) : false
   : step === 2
    ? Boolean(copyrightStatus) && (copyrightStatus !== "permission" || Boolean(proofName))
    : step === 3
-    ? Boolean(audioName)
+    ? Boolean(audioFile)
     : true;
 
- const changeAudio = (event: ChangeEvent<HTMLInputElement>) => setAudioName(event.target.files?.[0]?.name ?? "");
+ const changeAudio = (event: ChangeEvent<HTMLInputElement>) => setAudioFile(event.target.files?.[0] ?? null);
  const dropAudio = (event: DragEvent<HTMLDivElement>) => {
   event.preventDefault();
-  setAudioName(event.dataTransfer.files?.[0]?.name ?? "");
+  setAudioFile(event.dataTransfer.files?.[0] ?? null);
+ };
+
+ const submitRecording = async () => {
+  if (!audioFile || !selectedBookId) return;
+  setUploading(true);
+  setUploadError("");
+  try {
+   const supabase = createClient();
+   const { data: { user }, error: userError } = await supabase.auth.getUser();
+   if (userError || !user) throw new Error("লগইন করা প্রয়োজন।");
+
+   const recordingId = crypto.randomUUID();
+   const extension = audioFile.name.split(".").pop() || "mp3";
+   const storagePath = `${user.id}/${recordingId}.${extension}`;
+   const durationSeconds = await readAudioDuration(audioFile);
+
+   const { error: uploadErr } = await supabase.storage
+    .from("recordings")
+    .upload(storagePath, audioFile, { contentType: audioFile.type || undefined });
+   if (uploadErr) throw uploadErr;
+
+   const { error: insertErr } = await supabase.from("recordings").insert({
+    id: recordingId,
+    book_id: selectedBookId,
+    narrator_id: user.id,
+    storage_path: storagePath,
+    duration_seconds: durationSeconds ? Math.round(durationSeconds) : null,
+    status: "pending",
+   });
+   if (insertErr) {
+    // Clean up the uploaded file if the row insert failed, so we don't leave orphans.
+    await supabase.storage.from("recordings").remove([storagePath]);
+    throw insertErr;
+   }
+
+   setStep(4);
+  } catch (error) {
+   setUploadError(error instanceof Error ? error.message : "আপলোড ব্যর্থ হয়েছে, আবার চেষ্টা করুন।");
+  } finally {
+   setUploading(false);
+  }
+ };
+
+ const goNext = () => {
+  if (step === 3) {
+   submitRecording();
+   return;
+  }
+  setStep((current) => current + 1);
  };
 
  return <div className="rounded-3xl border border-[var(--line)] bg-[var(--cream)] p-5 shadow-[0_12px_35px_rgba(91,53,32,.05)] sm:p-7">
@@ -48,21 +116,19 @@ export function UploadStepper() {
 
   {step === 1 && <section>
    <p className="eyebrow">ধাপ ০১</p>
-   <h2 className="serif mt-2 text-2xl font-bold">কী রেকর্ড করবেন?</h2>
-   <p className="mt-1 text-sm leading-6 text-[var(--muted)]">খোলা রিকোয়েস্ট থেকে বেছে নিন, অথবা আপনার নিজের বই/বিষয়ের তথ্য দিন।</p>
+   <h2 className="serif mt-2 text-2xl font-bold">কোন বইটি রেকর্ড করবেন?</h2>
+   <p className="mt-1 text-sm leading-6 text-[var(--muted)]">লাইব্রেরিতে থাকা একটি বই বেছে নিন। নতুন বই বা বিষয় যোগ করার অপশন শিগগিরই আসছে।</p>
    <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-[#f5ede3] p-1">
-    <button type="button" onClick={() => setMode("request")} className={`rounded-lg px-3 py-2 text-xs font-bold ${mode === "request" ? "bg-white text-[var(--maroon)] shadow-sm" : "text-[var(--muted)]"}`}>রিকোয়েস্ট বেছে নিন</button>
+    <button type="button" onClick={() => setMode("book")} className={`rounded-lg px-3 py-2 text-xs font-bold ${mode === "book" ? "bg-white text-[var(--maroon)] shadow-sm" : "text-[var(--muted)]"}`}>বই বেছে নিন</button>
     <button type="button" onClick={() => setMode("manual")} className={`rounded-lg px-3 py-2 text-xs font-bold ${mode === "manual" ? "bg-white text-[var(--maroon)] shadow-sm" : "text-[var(--muted)]"}`}>নতুন বিষয় দিন</button>
    </div>
-   {mode === "request" ? <div className="mt-4 space-y-2">
-    {requests.map((request) => <label key={request.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${selectedRequest === request.id ? "border-[var(--amber)] bg-[#fff9f1]" : "border-[var(--line)] hover:border-[#d6baa1]"}`}>
-     <input type="radio" name="request" value={request.id} checked={selectedRequest === request.id} onChange={() => setSelectedRequest(request.id)} className="accent-[var(--maroon)]" />
-     <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{request.title}</span><span className="mt-0.5 block text-[11px] text-[var(--muted)]">{request.meta} · {request.votes} ভোট</span></span>
+   {mode === "book" ? <div className="mt-4 space-y-2">
+    {books.length === 0 && <p className="text-sm text-[var(--muted)]">লাইব্রেরিতে এখনো কোনো বই যোগ করা হয়নি।</p>}
+    {books.map((book) => <label key={book.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${selectedBookId === book.id ? "border-[var(--amber)] bg-[#fff9f1]" : "border-[var(--line)] hover:border-[#d6baa1]"}`}>
+     <input type="radio" name="book" value={book.id} checked={selectedBookId === book.id} onChange={() => setSelectedBookId(book.id)} className="accent-[var(--maroon)]" />
+     <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{book.title}</span><span className="mt-0.5 block text-[11px] text-[var(--muted)]">{book.author}</span></span>
     </label>)}
-   </div> : <div className="mt-4 space-y-3">
-    <input value={manualTitle} onChange={(event) => setManualTitle(event.target.value)} className="field" placeholder="বই বা বিষয়ের নাম" />
-    <textarea className="field min-h-24 resize-y" placeholder="লেখক, বিষয়, বা রেকর্ডিং সম্পর্কে সংক্ষিপ্ত তথ্য" />
-   </div>}
+   </div> : <div className="mt-4 rounded-xl border border-dashed border-[#d6baa1] bg-[#fcf7f0] p-4 text-xs leading-5 text-[var(--muted)]">এই অপশনটি শিগগিরই আসছে — আপাতত বিদ্যমান তালিকা থেকে একটি বই বেছে নিন।</div>}
   </section>}
 
   {step === 2 && <section>
@@ -96,7 +162,9 @@ export function UploadStepper() {
      <p className="mt-4 text-sm font-bold">অডিও ফাইল এখানে টেনে আনুন</p>
      <p className="mt-1 text-xs text-[var(--muted)]">MP3, WAV বা M4A · সর্বোচ্চ ৫০০ MB</p>
      <label className="mt-5 rounded-lg border border-[var(--line)] bg-white px-4 py-2 text-xs font-bold">ফাইল বেছে নিন<input type="file" accept="audio/mpeg,audio/wav,audio/x-wav,audio/mp4,.mp3,.wav,.m4a" onChange={changeAudio} className="sr-only" /></label>
-     {audioName && <p className="mt-4 max-w-full truncate text-xs font-bold text-[var(--sage)]">✓ {audioName}</p>}
+     {audioFile && <p className="mt-4 max-w-full truncate text-xs font-bold text-[var(--sage)]">✓ {audioFile.name}</p>}
+     {uploading && <p className="mt-3 text-xs font-bold text-[var(--maroon)]">আপলোড হচ্ছে…</p>}
+     {uploadError && <p className="mt-3 text-xs font-bold text-red-600">{uploadError}</p>}
     </div>
     <aside className="rounded-2xl bg-[#eef0e8] p-5 text-[#56614d]">
      <p className="text-xs font-bold uppercase tracking-[.14em]">রেকর্ডিং গাইডলাইন</p>
@@ -119,8 +187,8 @@ export function UploadStepper() {
   </section>}
 
   {step < 4 && <div className="mt-8 flex items-center justify-between border-t border-[var(--line)] pt-5">
-   <button type="button" disabled={step === 1} onClick={() => setStep((current) => current - 1)} className="rounded-xl px-3 py-2 text-sm font-bold text-[var(--muted)] disabled:opacity-30">পেছনে</button>
-   <button type="button" disabled={!canContinue} onClick={() => setStep((current) => current + 1)} className="rounded-xl bg-[var(--maroon)] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{step === 3 ? "জমা দিন" : "এগিয়ে যান"} →</button>
+   <button type="button" disabled={step === 1 || uploading} onClick={() => setStep((current) => current - 1)} className="rounded-xl px-3 py-2 text-sm font-bold text-[var(--muted)] disabled:opacity-30">পেছনে</button>
+   <button type="button" disabled={!canContinue} onClick={goNext} className="rounded-xl bg-[var(--maroon)] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{step === 3 ? (uploading ? "আপলোড হচ্ছে…" : "জমা দিন") : "এগিয়ে যান"} →</button>
   </div>}
  </div>;
 }
