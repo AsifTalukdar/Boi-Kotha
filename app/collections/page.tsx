@@ -1,11 +1,19 @@
-"use client";
+import { getBooks } from "@/lib/supabase/queries";
+import { getCollections } from "@/lib/supabase/collection_queries";
+import { CollectionsClient } from "./CollectionsClient";
+import { Suspense } from "react";
 
-import {useState} from "react";
-import {BookCard} from "@/components/BookCard";
-import {books,curatedCollections} from "@/lib/data";
+export const dynamic = "force-dynamic";
 
-export default function CollectionsPage(){
- const [open,setOpen]=useState<string[]>([curatedCollections[0]?.id]);
- const toggle=(id:string)=>setOpen(current=>current.includes(id)?current.filter(item=>item!==id):[...current,id]);
- return <div className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 lg:px-12"><p className="eyebrow">যত্নে সাজানো</p><h1 className="serif mt-2 text-4xl font-bold">সংগ্রহ</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">পাবলিক ডোমেইন বা যথাযথ অনুমতির ভিত্তিতে প্রকাশের উপযোগী পাঠের জন্য সাজানো কিউরেটেড থিম।</p><div className="mt-8 space-y-4">{curatedCollections.map(collection=>{const isOpen=open.includes(collection.id);const collectionBooks=books.filter(book=>collection.bookIds.includes(book.id));return <section key={collection.id} className="overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--cream)]"><button type="button" onClick={()=>toggle(collection.id)} aria-expanded={isOpen} className="flex w-full items-center gap-4 p-5 text-left sm:p-6"><span className="serif flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#ead6bf] text-xl font-bold text-[var(--maroon)]">{collection.icon}</span><span className="min-w-0 flex-1"><span className="block text-lg font-bold">{collection.title}</span><span className="mt-1 block text-sm text-[var(--muted)]">{collection.description}</span></span><span className="text-xl text-[var(--maroon)]">{isOpen?"−":"+"}</span></button>{isOpen&&<div className="border-t border-[var(--line)] px-5 pb-6 pt-5 sm:px-6"><div className="rounded-xl border border-[#d8b988] bg-[#fff8e9] px-4 py-3 text-sm leading-6 text-[#765638]"><span className="font-bold">কপিরাইট নোট: </span>{collection.copyrightNotice}</div><div className="hide-scrollbar mt-6 flex gap-5 overflow-x-auto pb-2">{collectionBooks.map(book=><BookCard key={book.id} book={book}/>)}</div><div className="mt-6 border-t border-[var(--line)] pt-4"><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--muted)]">উৎস</p><ul className="mt-2 flex flex-wrap gap-x-4 gap-y-2">{collection.sources.map(source=><li key={source.url}><a href={source.url} target="_blank" rel="noreferrer" className="text-xs font-bold text-[var(--maroon)] underline decoration-[#d9b787] underline-offset-4">{source.name} ↗</a></li>)}</ul></div></div>}</section>})}</div></div>;
+export default async function CollectionsPage() {
+  const [collections, allBooks] = await Promise.all([
+    getCollections(),
+    getBooks()
+  ]);
+
+  return (
+    <Suspense fallback={<div className="p-8 text-center">লোড হচ্ছে...</div>}>
+      <CollectionsClient collections={collections} allBooks={allBooks} />
+    </Suspense>
+  );
 }

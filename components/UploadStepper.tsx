@@ -56,32 +56,18 @@ export function UploadStepper({ books }: { books: UploadableBook[] }) {
   setUploading(true);
   setUploadError("");
   try {
-   const supabase = createClient();
-   const { data: { user }, error: userError } = await supabase.auth.getUser();
-   if (userError || !user) throw new Error("লগইন করা প্রয়োজন।");
-
-   const recordingId = crypto.randomUUID();
-   const extension = audioFile.name.split(".").pop() || "mp3";
-   const storagePath = `${user.id}/${recordingId}.${extension}`;
-   const durationSeconds = await readAudioDuration(audioFile);
-
-   const { error: uploadErr } = await supabase.storage
-    .from("recordings")
-    .upload(storagePath, audioFile, { contentType: audioFile.type || undefined });
-   if (uploadErr) throw uploadErr;
-
-   const { error: insertErr } = await supabase.from("recordings").insert({
-    id: recordingId,
-    book_id: selectedBookId,
-    narrator_id: user.id,
-    storage_path: storagePath,
-    duration_seconds: durationSeconds ? Math.round(durationSeconds) : null,
-    status: "pending",
+   const formData = new FormData();
+   formData.append("audio", audioFile);
+   formData.append("bookId", selectedBookId);
+   
+   const res = await fetch("/api/upload", {
+     method: "POST",
+     body: formData
    });
-   if (insertErr) {
-    // Clean up the uploaded file if the row insert failed, so we don't leave orphans.
-    await supabase.storage.from("recordings").remove([storagePath]);
-    throw insertErr;
+   
+   if (!res.ok) {
+     const data = await res.json();
+     throw new Error(data.error || "আপলোড ব্যর্থ হয়েছে, আবার চেষ্টা করুন।");
    }
 
    setStep(4);

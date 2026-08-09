@@ -1,5 +1,15 @@
-import Link from "next/link";
-import {RequestCard} from "@/components/RequestCard";
-import {requests} from "@/lib/data";
+import { getRequests } from "@/lib/supabase/request_queries";
+import { RequestsClient } from "./RequestsClient";
+import { Suspense } from "react";
 
-export default function RequestsPage(){return <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8"><div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="eyebrow">কমিউনিটি লাইব্রেরি</p><h1 className="serif mt-2 text-4xl font-bold">রিকোয়েস্ট বোর্ড</h1><p className="mt-3 max-w-lg text-sm leading-6 text-[var(--muted)]">যে বই বা বিষয়টি শুনতে চান, তার জন্য ভোট দিন। বেশি ভোট পাওয়া রিকোয়েস্টে আমাদের ন্যারেটররা আগে কাজ করেন।</p></div><button type="button" className="rounded-xl bg-[var(--maroon)] px-4 py-3 text-sm font-bold text-white">+ নতুন রিকোয়েস্ট</button></div><div className="mt-10 flex gap-2 overflow-x-auto"><button type="button" className="rounded-full bg-[var(--maroon)] px-4 py-2 text-xs font-bold text-white">সব রিকোয়েস্ট</button><button type="button" className="rounded-full border border-[var(--line)] px-4 py-2 text-xs font-bold text-[var(--muted)]">উপন্যাস</button><button type="button" className="rounded-full border border-[var(--line)] px-4 py-2 text-xs font-bold text-[var(--muted)]">কবিতা</button></div><div className="mt-5 space-y-3">{requests.map(request=><RequestCard key={request.id} request={request}/>)}</div><div className="mt-12 rounded-3xl bg-[#ead6bf] p-6 sm:p-8"><p className="eyebrow text-[#8b5b35]">আপনিও ন্যারেটর হতে পারেন</p><h2 className="serif mt-2 text-2xl font-bold">আপনার কণ্ঠে একটি গল্প?</h2><p className="mt-2 text-sm text-[var(--muted)]">ভালোবাসার বইগুলো নতুন করে শোনান।</p><Link href="/narrator" className="mt-4 inline-block rounded-xl bg-white px-4 py-3 text-sm font-bold text-[var(--maroon)]">ন্যারেটর স্টুডিও খুলুন →</Link></div></div>}
+export const dynamic = "force-dynamic";
+
+export default async function RequestsPage() {
+  const requests = await getRequests();
+
+  return (
+    <Suspense fallback={<div className="p-8 text-center">লোড হচ্ছে...</div>}>
+      <RequestsClient initialRequests={requests} />
+    </Suspense>
+  );
+}
