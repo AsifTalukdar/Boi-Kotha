@@ -5,7 +5,7 @@ import {AudioPlayer} from "@/components/AudioPlayer";
 import {PlayerProvider} from "@/components/PlayerContext";
 
 export const metadata: Metadata = {
-  title: "[PROJECT NAME] — গল্প শুনুন",
+  title: "বই কথা — গল্প শুনুন",
   description: "A warm, community-powered Bengali audiobook library.",
 };
 
