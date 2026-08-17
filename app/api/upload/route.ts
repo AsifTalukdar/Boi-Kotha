@@ -1,19 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import ffmpeg from "fluent-ffmpeg";
 import { writeFile, readFile, unlink } from "fs/promises";
 import path from "path";
 import os from "os";
-
-const s3 = new S3Client({
-  region: "auto",
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
-  }
-});
 
 function compressAudio(inputPath: string, outputPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -75,16 +65,21 @@ export async function POST(req: NextRequest) {
     // Read compressed file
     const compressedBuffer = await readFile(tempOutput);
 
-    // Upload to R2
+    // Upload to Supabase Storage (free — no credit card needed)
     const recordingId = crypto.randomUUID();
     const storagePath = `${user.id}/${recordingId}.mp3`;
     
-    await s3.send(new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME || "recordings",
-      Key: storagePath,
-      Body: compressedBuffer,
-      ContentType: "audio/mpeg"
-    }));
+    const { error: uploadError } = await supabase.storage
+      .from("recordings")
+      .upload(storagePath, compressedBuffer, {
+        contentType: "audio/mpeg",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("Supabase Storage Upload Error:", uploadError);
+      return NextResponse.json({ error: "Failed to upload audio file" }, { status: 500 });
+    }
 
     // Cleanup temp files
     await unlink(tempInput).catch(() => {});
