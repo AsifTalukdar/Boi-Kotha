@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {RequestCard} from "@/components/RequestCard";
 import { incrementVote } from "@/lib/actions/requests";
