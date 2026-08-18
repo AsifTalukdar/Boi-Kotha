@@ -24,7 +24,6 @@ export async function getAdminBooks(): Promise<AdminBook[]> {
       author_bn,
       description_bn,
       cover_color,
-      genre,
       genres ( id, name_bn ),
       recordings ( id )
     `)
@@ -41,8 +40,8 @@ export async function getAdminBooks(): Promise<AdminBook[]> {
     author_bn: row.author_bn,
     description_bn: row.description_bn,
     cover_color: row.cover_color,
-    genre_id: row.genres?.id ?? row.genre ?? null,
-    genre_name: row.genres?.name_bn ?? null,
+    genre_id: row.genres?.[0]?.id ?? null,
+    genre_name: row.genres?.[0]?.name_bn ?? null,
     recording_count: Array.isArray(row.recordings) ? row.recordings.length : 0,
     created_at: row.created_at,
   }));

@@ -13,17 +13,24 @@ export async function createBook(formData: {
   genre: string | null;
 }) {
   const supabase = await createClient();
-  const { error } = await supabase.from("books").insert({
+  const { data, error } = await supabase.from("books").insert({
     title_bn: formData.title_bn,
     author_bn: formData.author_bn || null,
     description_bn: formData.description_bn || null,
     cover_color: formData.cover_color || "#754338",
-    genre: formData.genre || null,
-  });
+  }).select("id").single();
 
   if (error) {
     console.error("Error creating book:", error);
     return { error: error.message };
+  }
+
+  if (formData.genre && data) {
+    const { error: genreError } = await supabase.from("book_genres").insert({
+      book_id: data.id,
+      genre_id: formData.genre,
+    });
+    if (genreError) console.error("Error setting genre:", genreError);
   }
 
   revalidatePath("/admin/books");
@@ -49,13 +56,22 @@ export async function updateBook(
       author_bn: formData.author_bn || null,
       description_bn: formData.description_bn || null,
       cover_color: formData.cover_color || "#754338",
-      genre: formData.genre || null,
     })
     .eq("id", id);
 
   if (error) {
     console.error("Error updating book:", error);
     return { error: error.message };
+  }
+
+  // Update genre: delete old and insert new
+  await supabase.from("book_genres").delete().eq("book_id", id);
+  if (formData.genre) {
+    const { error: genreError } = await supabase.from("book_genres").insert({
+      book_id: id,
+      genre_id: formData.genre,
+    });
+    if (genreError) console.error("Error setting genre:", genreError);
   }
 
   revalidatePath("/admin/books");
