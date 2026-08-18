@@ -39,8 +39,6 @@ export default async function BookDetailPage({ params }: { params: Promise<{ slu
             {book.description} এই কালজয়ী রচনাটি নতুন প্রজন্মের শ্রোতাদের জন্য আবারও কণ্ঠে তুলে ধরেছেন আমাদের কমিউনিটির ন্যারেটররা।
           </p>
           <div className="mt-8 flex gap-6 border-t border-[var(--line)] pt-5 text-xs text-[var(--muted)]">
-            <span><b className="block text-lg text-[var(--ink)]">১২.৪k</b>শ্রোতা</span>
-            <span><b className="block text-lg text-[var(--ink)]">৪.৯</b>রেটিং</span>
             <span><b className="block text-lg text-[var(--ink)]">{book.duration}</b>সময়</span>
           </div>
         </div>
