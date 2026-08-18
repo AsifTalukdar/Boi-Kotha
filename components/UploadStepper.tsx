@@ -43,6 +43,7 @@ export function UploadStepper({ books: initialBooks }: { books: UploadableBook[]
  const [manualTitle, setManualTitle] = useState("");
  const [manualAuthor, setManualAuthor] = useState("");
  const [manualDescription, setManualDescription] = useState("");
+ const [manualCoverColor, setManualCoverColor] = useState("#754338");
  const [creatingBook, startCreatingBook] = useTransition();
  const [manualError, setManualError] = useState("");
  const [manualCreated, setManualCreated] = useState(false);
@@ -74,7 +75,7 @@ export function UploadStepper({ books: initialBooks }: { books: UploadableBook[]
      title_bn: manualTitle.trim(),
      author_bn: manualAuthor.trim() || null,
      description_bn: manualDescription.trim() || null,
-     cover_color: "#754338",
+     cover_color: manualCoverColor,
    }).select("id, title_bn, author_bn").single();
 
    if (error) {
@@ -197,6 +198,18 @@ export function UploadStepper({ books: initialBooks }: { books: UploadableBook[]
         placeholder="বইটির বিষয়বস্তু সম্পর্কে সংক্ষেপে লিখুন…"
         className="mt-1 w-full rounded-xl border border-[var(--line)] bg-white px-4 py-2.5 text-sm focus:border-[var(--amber)] focus:outline-none"
        />
+      </label>
+      <label className="block">
+       <span className="text-xs font-bold text-[var(--muted)]">বইয়ের কভার রং</span>
+       <div className="mt-1 flex items-center gap-3">
+         <input
+          type="color"
+          value={manualCoverColor}
+          onChange={(e) => setManualCoverColor(e.target.value)}
+          className="h-10 w-12 cursor-pointer rounded border border-[var(--line)] bg-white p-0.5"
+         />
+         <span className="text-xs text-[var(--muted)]">রং বেছে নিন অথবা ডিফল্ট ব্যবহার করুন</span>
+       </div>
       </label>
       {manualError && <p className="text-xs font-bold text-red-600">{manualError}</p>}
       <button
