@@ -8,10 +8,51 @@ import { formatClock } from "@/lib/format";
 
 const speedToRate: Record<string, number> = { "1x": 1, "1.25x": 1.25, "1.5x": 1.5 };
 
+function ProgressBar({ audioRef, duration }: { audioRef: React.RefObject<HTMLAudioElement | null>; duration: number }) {
+  const [currentTime, setCurrentTime] = useState(0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    
+    setCurrentTime(audio.currentTime);
+
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleLoadedData = () => setCurrentTime(audio.currentTime);
+    
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("loadeddata", handleLoadedData);
+    
+    return () => {
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("loadeddata", handleLoadedData);
+    };
+  }, [audioRef]);
+
+  return (
+    <div className="hidden w-[30%] items-center gap-3 md:flex">
+      <span className="text-[11px] text-[var(--muted)]">{formatClock(currentTime)}</span>
+      <input
+        aria-label="অডিও অগ্রগতি"
+        type="range"
+        min="0"
+        max={duration || 0}
+        value={currentTime}
+        onChange={(event) => {
+          const value = Number(event.target.value);
+          setCurrentTime(value);
+          if (audioRef.current) audioRef.current.currentTime = value;
+        }}
+        className="audio-range"
+      />
+      <span className="text-[11px] text-[var(--muted)]">{formatClock(duration)}</span>
+    </div>
+  );
+}
+
 export function AudioPlayer() {
   const { currentTrack, isPlaying, speed, toggle, pause, cycleSpeed } = usePlayer();
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -22,7 +63,6 @@ export function AudioPlayer() {
     let cancelled = false;
     setLoading(true);
     setErrorMessage("");
-    setCurrentTime(0);
 
     fetch(`/api/recordings/${currentTrack.recordingId}/signed-url`)
       .then(async (response) => {
@@ -68,7 +108,6 @@ export function AudioPlayer() {
     <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--line)] bg-[#fffaf4]/95 px-4 py-3 shadow-[0_-10px_35px_rgba(91,53,32,.08)] backdrop-blur-md sm:px-6">
       <audio
         ref={audioRef}
-        onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
         onLoadedMetadata={(event) => {
           if (!duration && Number.isFinite(event.currentTarget.duration)) setDuration(event.currentTarget.duration);
         }}
@@ -92,23 +131,7 @@ export function AudioPlayer() {
         >
           <Icon name={isPlaying ? "pause" : "play"} size={17} />
         </button>
-        <div className="hidden w-[30%] items-center gap-3 md:flex">
-          <span className="text-[11px] text-[var(--muted)]">{formatClock(currentTime)}</span>
-          <input
-            aria-label="অডিও অগ্রগতি"
-            type="range"
-            min="0"
-            max={duration || 0}
-            value={currentTime}
-            onChange={(event) => {
-              const value = Number(event.target.value);
-              setCurrentTime(value);
-              if (audioRef.current) audioRef.current.currentTime = value;
-            }}
-            className="audio-range"
-          />
-          <span className="text-[11px] text-[var(--muted)]">{formatClock(duration)}</span>
-        </div>
+        <ProgressBar audioRef={audioRef} duration={duration} />
         <button type="button" onClick={cycleSpeed} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--muted)]">
           {speed}
         </button>

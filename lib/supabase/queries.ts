@@ -24,6 +24,14 @@ const recordingsSelect = `
   narrator:profiles!recordings_narrator_id_fkey ( display_name )
 `;
 
+// Lighter version for list views to avoid over-fetching
+const listRecordingsSelect = `
+  id,
+  duration_seconds,
+  status,
+  narrator:profiles!recordings_narrator_id_fkey ( display_name )
+`;
+
 function mapBook(row: any): BookWithRecordings {
   const genre = row.genres && row.genres.length > 0 ? row.genres[0].name_bn : "অজানা";
   const recordings: RecordingRow[] = row.recordings || [];
@@ -56,7 +64,7 @@ export async function getBooks(): Promise<BookWithRecordings[]> {
         name_bn
       ),
       recordings (
-        ${recordingsSelect}
+        ${listRecordingsSelect}
       )
     `);
 
@@ -81,7 +89,7 @@ export async function getBooksByGenre(genreSlug: string): Promise<BookWithRecord
         name_bn
       ),
       recordings (
-        ${recordingsSelect}
+        ${listRecordingsSelect}
       )
     `)
     .eq("genres.slug", genreSlug);
