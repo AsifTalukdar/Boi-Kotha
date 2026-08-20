@@ -32,6 +32,24 @@ const listRecordingsSelect = `
   narrator:profiles!recordings_narrator_id_fkey ( display_name )
 `;
 
+// Deterministic cover palette — used when a book has no cover_color set in the DB
+const COVER_PALETTE = [
+  { cover: "#754338", accent: "#d18d4a" },
+  { cover: "#5c3a33", accent: "#e4a26a" },
+  { cover: "#3f4c4a", accent: "#d5a36a" },
+  { cover: "#66715d", accent: "#d9bb81" },
+  { cover: "#493c5b", accent: "#caa1ce" },
+  { cover: "#3e6256", accent: "#b9d297" },
+  { cover: "#9b5f43", accent: "#f3cd96" },
+  { cover: "#bd8a61", accent: "#f2c795" },
+];
+
+function pickPalette(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return COVER_PALETTE[hash % COVER_PALETTE.length];
+}
+
 function mapBook(row: any): BookWithRecordings {
   const genre = row.genres && row.genres.length > 0 ? row.genres[0].name_bn : "অজানা";
   const recordings: RecordingRow[] = row.recordings || [];
@@ -39,13 +57,19 @@ function mapBook(row: any): BookWithRecordings {
   // Prefer an approved recording for the card/hero display; fall back to whatever is visible.
   const defaultRec = recordings.find((recording) => recording.status === "approved") ?? recordings[0] ?? null;
 
+  // Derive a cover colour — fall back to a deterministic palette swatch if the DB value is null.
+  const palette = pickPalette(row.id);
+  const cover  = row.cover_color || palette.cover;
+  // Lighten the cover slightly for the accent; use palette accent as safe fallback.
+  const accent = palette.accent;
+
   return {
     id: row.id, // The ID from DB, which is a UUID
     title: row.title_bn,
     author: row.author_bn,
     description: row.description_bn,
-    cover: row.cover_color,
-    accent: "", // Or provide a fallback if needed
+    cover,
+    accent,
     genre: genre,
     duration: defaultRec ? formatDurationLong(defaultRec.duration_seconds) : "কোনো অডিও নেই",
     narrator: defaultRec?.narrator?.display_name ?? "কেউ নেই",
