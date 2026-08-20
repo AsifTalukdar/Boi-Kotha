@@ -10,19 +10,27 @@ const speedToRate: Record<string, number> = { "1x": 1, "1.25x": 1.25, "1.5x": 1.
 
 function ProgressBar({ audioRef, duration }: { audioRef: React.RefObject<HTMLAudioElement | null>; duration: number }) {
   const [currentTime, setCurrentTime] = useState(0);
+  const lastUpdateRef = useRef(0);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    
+
     setCurrentTime(audio.currentTime);
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    // Throttle to once every 250 ms — smooth enough for a scrubber,
+    // but avoids a state update on every browser animation tick.
+    const handleTimeUpdate = () => {
+      const now = Date.now();
+      if (now - lastUpdateRef.current < 250) return;
+      lastUpdateRef.current = now;
+      setCurrentTime(audio.currentTime);
+    };
     const handleLoadedData = () => setCurrentTime(audio.currentTime);
-    
+
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadeddata", handleLoadedData);
-    
+
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("loadeddata", handleLoadedData);

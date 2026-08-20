@@ -24,14 +24,25 @@ export async function getAdminBooks(): Promise<AdminBook[]> {
       author_bn,
       description_bn,
       cover_color,
-      genres ( id, name_bn ),
-      recordings ( id )
+      created_at,
+      genres ( id, name_bn )
     `)
     .order("title_bn");
 
   if (error) {
     console.error("Error fetching admin books:", error);
     return [];
+  }
+
+  // Fetch recording counts in a single aggregate query instead of
+  // pulling all recording IDs into memory via recordings(id).
+  const { data: countData } = await supabase
+    .from("recordings")
+    .select("book_id");
+
+  const countByBook: Record<string, number> = {};
+  for (const row of countData || []) {
+    countByBook[row.book_id] = (countByBook[row.book_id] || 0) + 1;
   }
 
   return (data || []).map((row: any) => ({
@@ -42,7 +53,7 @@ export async function getAdminBooks(): Promise<AdminBook[]> {
     cover_color: row.cover_color,
     genre_id: row.genres?.[0]?.id ?? null,
     genre_name: row.genres?.[0]?.name_bn ?? null,
-    recording_count: Array.isArray(row.recordings) ? row.recordings.length : 0,
+    recording_count: countByBook[row.id] || 0,
     created_at: row.created_at,
   }));
 }
