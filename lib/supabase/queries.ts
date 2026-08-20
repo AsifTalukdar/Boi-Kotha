@@ -117,6 +117,8 @@ export async function getBookById(id: string): Promise<BookWithRecordings | null
       )
     `)
     .eq("id", id)
+    .eq("recordings.status", "approved")
+    .not("recordings.storage_path", "is", null)
     .single();
 
   if (error) {

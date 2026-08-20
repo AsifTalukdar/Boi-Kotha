@@ -9,7 +9,7 @@ export default async function BookDetailPage({ params }: { params: Promise<{ slu
   const book = await getBookById(slug);
   if (!book) notFound();
 
-  const playableRecordings = book.recordings.filter((recording) => recording.storage_path);
+  const playableRecordings = book.recordings;
   const hasRecordings = playableRecordings.length > 0;
   const heroRecording = playableRecordings[0];
 
