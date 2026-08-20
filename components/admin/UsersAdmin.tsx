@@ -1,20 +1,24 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo, useDeferredValue } from "react";
 import { updateUserRole, toggleUserSuspension } from "@/lib/actions/admin";
 import type { AdminUser } from "@/lib/supabase/admin_queries";
 
 export function UsersAdmin({ initialUsers }: { initialUsers: AdminUser[] }) {
   const [users, setUsers] = useState<AdminUser[]>(initialUsers);
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [isPending, startTransition] = useTransition();
 
-  const filteredUsers = users.filter(
-    (u) =>
-      `${u.display_name || ""} ${u.email}`
-        .toLowerCase()
-        .includes(query.toLowerCase())
-  );
+  const filteredUsers = useMemo(() => {
+    const q = deferredQuery.toLowerCase();
+    return users.filter(
+      (u) =>
+        `${u.display_name || ""} ${u.email}`
+          .toLowerCase()
+          .includes(q)
+    );
+  }, [users, deferredQuery]);
 
   const handleRoleChange = (userId: string, newRole: "listener" | "narrator" | "admin") => {
     startTransition(async () => {

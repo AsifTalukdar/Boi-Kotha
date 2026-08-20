@@ -4,7 +4,7 @@ import Link from "next/link";
 import {RequestCard} from "@/components/RequestCard";
 import { incrementVote } from "@/lib/actions/requests";
 import type { RequestRow } from "@/lib/supabase/request_queries";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 function getCategoryColor(category: string) {
   if (category === "উপন্যাস") return { tint: "#ead5bd", icon: "বই" };
@@ -15,7 +15,9 @@ function getCategoryColor(category: string) {
 
 export function RequestsClient({ initialRequests }: { initialRequests: RequestRow[] }) {
   const [filter, setFilter] = useState("সব রিকোয়েস্ট");
-  const filtered = filter === "সব রিকোয়েস্ট" ? initialRequests : initialRequests.filter(r => r.category === filter);
+  const filtered = useMemo(() => {
+    return filter === "সব রিকোয়েস্ট" ? initialRequests : initialRequests.filter(r => r.category === filter);
+  }, [filter, initialRequests]);
 
   return <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8"><div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="eyebrow">কমিউনিটি লাইব্রেরি</p><h1 className="serif mt-2 text-4xl font-bold">রিকোয়েস্ট বোর্ড</h1><p className="mt-3 max-w-lg text-sm leading-6 text-[var(--muted)]">যে বই বা বিষয়টি শুনতে চান, তার জন্য ভোট দিন। বেশি ভোট পাওয়া রিকোয়েস্টে আমাদের ন্যারেটররা আগে কাজ করেন।</p></div><button type="button" className="rounded-xl bg-[var(--maroon)] px-4 py-3 text-sm font-bold text-white">+ নতুন রিকোয়েস্ট</button></div><div className="mt-10 flex gap-2 overflow-x-auto"><button type="button" onClick={() => setFilter("সব রিকোয়েস্ট")} className={`rounded-full px-4 py-2 text-xs font-bold ${filter === "সব রিকোয়েস্ট" ? "bg-[var(--maroon)] text-white" : "border border-[var(--line)] text-[var(--muted)]"}`}>সব রিকোয়েস্ট</button><button type="button" onClick={() => setFilter("উপন্যাস")} className={`rounded-full px-4 py-2 text-xs font-bold ${filter === "উপন্যাস" ? "bg-[var(--maroon)] text-white" : "border border-[var(--line)] text-[var(--muted)]"}`}>উপন্যাস</button><button type="button" onClick={() => setFilter("কবিতা")} className={`rounded-full px-4 py-2 text-xs font-bold ${filter === "কবিতা" ? "bg-[var(--maroon)] text-white" : "border border-[var(--line)] text-[var(--muted)]"}`}>কবিতা</button></div><div className="mt-5 space-y-3">{filtered.map(req=>{
     const { tint, icon } = getCategoryColor(req.category);

@@ -97,32 +97,60 @@ export function UploadStepper({ books: initialBooks }: { books: UploadableBook[]
   });
  };
 
- const submitRecording = async () => {
-  if (!audioFile || !selectedBookId) return;
-  setUploading(true);
-  setUploadError("");
-  try {
-   const formData = new FormData();
-   formData.append("audio", audioFile);
-   formData.append("bookId", selectedBookId);
+  const submitRecording = async () => {
+   if (!audioFile || !selectedBookId) return;
    
-   const res = await fetch("/api/upload", {
-     method: "POST",
-     body: formData
-   });
-   
-   if (!res.ok) {
-     const data = await res.json();
-     throw new Error(data.error || "আপলোড ব্যর্থ হয়েছে, আবার চেষ্টা করুন।");
+   if (audioFile.size > 500 * 1024 * 1024) {
+     setUploadError("ফাইল সাইজ ৫০০ MB এর বেশি হতে পারবে না।");
+     return;
    }
+   
+   setUploading(true);
+   setUploadError("");
+   try {
+    const supabase = createClient();
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("অনুগ্রহ করে লগ ইন করুন।");
+    
+    const durationSeconds = await readAudioDuration(audioFile);
+    
+    const recordingId = crypto.randomUUID();
+    const fileExtension = audioFile.name.split('.').pop() || 'mp3';
+    const storagePath = `${user.id}/${recordingId}.${fileExtension}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from("recordings")
+      .upload(storagePath, audioFile, {
+        upsert: false,
+      });
+      
+    if (uploadError) {
+      console.error(uploadError);
+      throw new Error("আপলোড ব্যর্থ হয়েছে।");
+    }
+    
+    const { error: insertError } = await supabase.from("recordings").insert({
+      id: recordingId,
+      book_id: selectedBookId,
+      narrator_id: user.id,
+      storage_path: storagePath,
+      duration_seconds: Math.round(durationSeconds || 0),
+      status: "pending",
+    });
+    
+    if (insertError) {
+      console.error(insertError);
+      throw new Error("ডেটাবেসে সেভ করতে সমস্যা হয়েছে।");
+    }
 
-   setStep(4);
-  } catch (error) {
-   setUploadError(error instanceof Error ? error.message : "আপলোড ব্যর্থ হয়েছে, আবার চেষ্টা করুন।");
-  } finally {
-   setUploading(false);
-  }
- };
+    setStep(4);
+   } catch (error) {
+    setUploadError(error instanceof Error ? error.message : "আপলোড ব্যর্থ হয়েছে, আবার চেষ্টা করুন।");
+   } finally {
+    setUploading(false);
+   }
+  };
 
  const goNext = () => {
   if (step === 3) {

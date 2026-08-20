@@ -41,11 +41,13 @@ export async function ensureListenerProfile(supabase: SupabaseClient, user: User
   return raced;
 }
 
-export async function getCurrentUserProfile() {
+import { cache } from "react";
+
+export const getCurrentUserProfile = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
   const profile = await ensureListenerProfile(supabase, user);
   return { supabase, user, profile };
-}
+});

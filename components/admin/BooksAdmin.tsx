@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo, useDeferredValue } from "react";
 import { Icon } from "@/components/Icon";
 import { createBook, updateBook, deleteBook } from "@/lib/actions/admin";
 import type { AdminBook, GenreOption } from "@/lib/supabase/admin_queries";
@@ -195,24 +195,28 @@ export function BooksAdmin({
   genres: GenreOption[];
 }) {
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [genreFilter, setGenreFilter] = useState("সব ধরণ");
   const [modalOpen, setModalOpen] = useState(false);
   const [editBook, setEditBook] = useState<AdminBook | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const genreNames = [
+  const genreNames = useMemo(() => [
     "সব ধরণ",
     ...Array.from(new Set(books.map((b) => b.genre_name).filter(Boolean))),
-  ];
+  ], [books]);
 
-  const shown = books.filter(
-    (book) =>
-      (genreFilter === "সব ধরণ" || book.genre_name === genreFilter) &&
-      `${book.title_bn} ${book.author_bn}`
-        .toLowerCase()
-        .includes(query.toLowerCase())
-  );
+  const shown = useMemo(() => {
+    const q = deferredQuery.toLowerCase();
+    return books.filter(
+      (book) =>
+        (genreFilter === "সব ধরণ" || book.genre_name === genreFilter) &&
+        `${book.title_bn} ${book.author_bn}`
+          .toLowerCase()
+          .includes(q)
+    );
+  }, [books, genreFilter, deferredQuery]);
 
   const openAdd = () => {
     setEditBook(null);

@@ -6,17 +6,20 @@ export default async function NarratorPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
-  let userRecordings: any[] = [];
+  let recentRecordings: any[] = [];
+  let totalCount = 0;
   if (user) {
-    const { data } = await supabase
+    const { data, count } = await supabase
       .from("recordings")
-      .select("*, books(title_bn)")
-      .eq("narrator_id", user.id);
-    userRecordings = data || [];
+      .select("*, books(title_bn)", { count: "exact" })
+      .eq("narrator_id", user.id)
+      .limit(3);
+    recentRecordings = data || [];
+    totalCount = count || 0;
   }
 
   const summary = [
-    {label:"মোট আপলোড",value:userRecordings.length.toString(),note:"এই মাসে +0",tone:"text-[var(--sage)]"},
+    {label:"মোট আপলোড",value:totalCount.toString(),note:"এই মাসে +0",tone:"text-[var(--sage)]"},
     {label:"পাওয়া ভোট",value:"0",note:"গত মাসের চেয়ে +0%",tone:"text-[var(--sage)]"},
     {label:"লিডারবোর্ড র‍্যাঙ্ক",value:"-",note:"-",tone:"text-[var(--maroon)]"},
   ];
@@ -49,7 +52,7 @@ export default async function NarratorPage() {
      <Link href="/narrator/stats" className="text-xs font-bold text-[var(--maroon)]">বিস্তারিত stats →</Link>
     </div>
     <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--cream)]">
-     {userRecordings.slice(0, 3).map((item) => {
+     {recentRecordings.map((item) => {
        const statusBn = item.status === "approved" ? "অনুমোদিত" : item.status === "rejected" ? "বাতিল" : "পর্যালোচনাধীন";
        const statusTone = item.status === "approved" ? "status-green" : item.status === "rejected" ? "status-red" : "status-amber";
        
@@ -62,7 +65,7 @@ export default async function NarratorPage() {
       <span className={`status ${statusTone}`}>{statusBn}</span>
      </div>
      })}
-     {userRecordings.length === 0 && <p className="p-5 text-sm text-[var(--muted)]">এখনো কোনো রেকর্ডিং আপলোড করা হয়নি।</p>}
+     {recentRecordings.length === 0 && <p className="p-5 text-sm text-[var(--muted)]">এখনো কোনো রেকর্ডিং আপলোড করা হয়নি।</p>}
     </div>
    </section>
   </div>
