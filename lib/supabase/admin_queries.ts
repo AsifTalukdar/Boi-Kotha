@@ -151,3 +151,55 @@ export async function getGenreOptions(): Promise<GenreOption[]> {
 
   return data || [];
 }
+
+// ── Collections ────────────────────────────────────────────────────────
+
+export type AdminCollection = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  icon: string;
+  copyright_notice: string;
+  sources: { name: string; url: string }[];
+  book_ids: string[];
+  book_count: number;
+};
+
+export type AdminBookPick = { id: string; title_bn: string; author_bn: string | null };
+
+export async function getAdminCollections(): Promise<AdminCollection[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("collections")
+    .select(`*, collection_books ( book_id )`)
+    .order("created_at");
+
+  if (error) {
+    console.error("Error fetching admin collections:", error);
+    return [];
+  }
+
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    description: row.description,
+    icon: row.icon,
+    copyright_notice: row.copyright_notice,
+    sources: row.sources || [],
+    book_ids: (row.collection_books || []).map((cb: any) => cb.book_id),
+    book_count: (row.collection_books || []).length,
+  }));
+}
+
+export async function getAdminBookPicks(): Promise<AdminBookPick[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("books")
+    .select("id, title_bn, author_bn")
+    .order("title_bn");
+
+  if (error) return [];
+  return data || [];
+}

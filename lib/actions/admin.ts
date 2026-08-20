@@ -160,3 +160,96 @@ export async function dismissReport(id: string) {
   revalidatePath("/admin/reports");
   return { error: null };
 }
+
+// ── Collections ────────────────────────────────────────────────────────
+
+export async function createCollection(formData: {
+  title: string;
+  description: string;
+  icon: string;
+  copyright_notice: string;
+  sources: { name: string; url: string }[];
+  book_ids: string[];
+}) {
+  const supabase = await createClient();
+  const slug = formData.title
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .slice(0, 60);
+
+  const { data, error } = await supabase
+    .from("collections")
+    .insert({
+      slug,
+      title: formData.title,
+      description: formData.description,
+      icon: formData.icon,
+      copyright_notice: formData.copyright_notice,
+      sources: formData.sources,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+
+  if (formData.book_ids.length > 0) {
+    await supabase.from("collection_books").insert(
+      formData.book_ids.map((book_id) => ({ collection_id: data.id, book_id }))
+    );
+  }
+
+  revalidatePath("/admin/collections");
+  revalidatePath("/collections");
+  return { error: null };
+}
+
+export async function updateCollection(
+  id: string,
+  formData: {
+    title: string;
+    description: string;
+    icon: string;
+    copyright_notice: string;
+    sources: { name: string; url: string }[];
+    book_ids: string[];
+  }
+) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("collections")
+    .update({
+      title: formData.title,
+      description: formData.description,
+      icon: formData.icon,
+      copyright_notice: formData.copyright_notice,
+      sources: formData.sources,
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  // Replace the book list entirely
+  await supabase.from("collection_books").delete().eq("collection_id", id);
+  if (formData.book_ids.length > 0) {
+    await supabase.from("collection_books").insert(
+      formData.book_ids.map((book_id) => ({ collection_id: id, book_id }))
+    );
+  }
+
+  revalidatePath("/admin/collections");
+  revalidatePath("/collections");
+  return { error: null };
+}
+
+export async function deleteCollection(id: string) {
+  const supabase = await createClient();
+  // collection_books rows cascade via FK in the DB; if not, delete manually
+  await supabase.from("collection_books").delete().eq("collection_id", id);
+  const { error } = await supabase.from("collections").delete().eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/collections");
+  revalidatePath("/collections");
+  return { error: null };
+}

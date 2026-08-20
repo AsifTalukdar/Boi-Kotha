@@ -8,6 +8,7 @@ import {Icon} from "@/components/Icon";
 const adminNav = [
  {href:"/admin",label:"মডারেশন কিউ",count:"১২"},
  {href:"/admin/books",label:"বই"},
+ {href:"/admin/collections",label:"সংগ্রহ"},
  {href:"/admin/users",label:"ইউজার"},
  {href:"/admin/reports",label:"রিপোর্টস"},
  {href:"/admin/payments",label:"পেমেন্টস"},
