@@ -27,7 +27,8 @@ export const requests = [
  {id:'r3',title:'মুক্তিযুদ্ধের স্মৃতিচারণা — নারীকণ্ঠ',meta:'স্মৃতিকথা · ১ সপ্তাহ আগে',votes:76,tint:'#e4c9c2',icon:'স্ম'},
  {id:'r4',title:'শিশুদের জন্য ঠাকুরমার ঝুলি',meta:'শিশু · ২ সপ্তাহ আগে',votes:61,tint:'#d9d7e4',icon:'গল্প'},
 ];
-export const navLinks = [{href:'/',label:'হোম',icon:'⌂'},{href:'/requests',label:'রিকোয়েস্ট বোর্ড',icon:'✦'}];
+
+export const navLinks = [{href:'/',label:'হোম',icon:'⌂'},{href:'/requests',label:'রিকোয়েস্ট বোর্ড',icon:'✦'},{href:'/saved',label:'প্রিয় বই',icon:'❤'}];
 
 export type NarratorUpload = {
  id:string;
