@@ -64,6 +64,7 @@ export function AudioPlayer() {
   const [duration, setDuration] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const hasError = Boolean(errorMessage);
 
   // Load a fresh signed URL whenever the selected recording changes.
   useEffect(() => {
@@ -85,7 +86,12 @@ export function AudioPlayer() {
         audioRef.current.play().catch(() => {});
       })
       .catch((error: Error) => {
-        if (!cancelled) setErrorMessage(error.message);
+        if (cancelled) return;
+        setErrorMessage(error.message);
+        // The audio never loaded — make sure the UI doesn't keep claiming it is
+        // playing. Without this the play/pause button stays on "pause" (i.e.
+        // "currently playing") over silence.
+        pause();
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -128,19 +134,20 @@ export function AudioPlayer() {
           <p className="truncate text-xs text-[var(--muted)]">
             {narratorName}
             {loading && " · লোড হচ্ছে…"}
-            {errorMessage && ` · ${errorMessage}`}
           </p>
+          {hasError && <p className="truncate text-xs font-bold text-red-700">{errorMessage}</p>}
         </div>
         <button
           type="button"
           onClick={toggle}
-          disabled={loading}
+          disabled={loading || hasError}
+          aria-label={isPlaying ? "বিরতি দিন" : "চালান"}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--maroon)] text-white disabled:opacity-50"
         >
           <Icon name={isPlaying ? "pause" : "play"} size={17} />
         </button>
         <ProgressBar audioRef={audioRef} duration={duration} />
-        <button type="button" onClick={cycleSpeed} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--muted)]">
+        <button type="button" onClick={cycleSpeed} aria-label={`গতি: ${speed}`} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--muted)]">
           {speed}
         </button>
       </div>

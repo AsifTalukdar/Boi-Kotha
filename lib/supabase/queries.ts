@@ -100,6 +100,18 @@ export async function getBooks(): Promise<BookWithRecordings[]> {
   return data.map(mapBook);
 }
 
+export async function getFavoriteBooks(): Promise<BookWithRecordings[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from("books")
+    .select(`*, genres(slug,name_bn), recordings(${listRecordingsSelect}), favorites!inner(user_id)`)
+    .eq("favorites.user_id", user.id);
+  if (error) { console.error("Error fetching favorites:", error); return []; }
+  return data.map(mapBook);
+}
+
 export async function getBooksByGenre(genreSlug: string): Promise<BookWithRecordings[]> {
   const supabase = await createClient();
   // In Supabase, to filter by a many-to-many joined table, we can use an inner join.
@@ -126,7 +138,13 @@ export async function getBooksByGenre(genreSlug: string): Promise<BookWithRecord
   return data.map(mapBook);
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function getBookById(id: string): Promise<BookWithRecordings | null> {
+  // Book ids are UUIDs; a non-UUID slug (e.g. a stale bookmark) would trigger a
+  // Postgres 22P02 error and a wasted round-trip, so reject it up front.
+  if (!UUID_RE.test(id)) return null;
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("books")

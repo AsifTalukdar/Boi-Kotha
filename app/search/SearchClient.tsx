@@ -4,6 +4,7 @@ import {useEffect,useState} from "react";
 import {useSearchParams} from "next/navigation";
 import {BookCard} from "@/components/BookCard";
 import {Icon} from "@/components/Icon";
+import { toBnDigits } from "@/lib/format";
 import type { BookWithRecordings } from "@/lib/supabase/queries";
 
 export function SearchClient({ books }: { books: BookWithRecordings[] }) {
@@ -18,9 +19,9 @@ export function SearchClient({ books }: { books: BookWithRecordings[] }) {
       <h1 className="serif mt-2 text-4xl font-bold">কী শুনতে চান?</h1>
       <div className="relative mt-7 max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--cream)]">
         <Icon name="search" size={18} />
-        <input autoFocus value={query} onChange={event => setQuery(event.target.value)} className="search-field py-3" placeholder="বই বা লেখকের নাম লিখুন" />
+        <input autoFocus aria-label="বই বা লেখকের নাম লিখুন" value={query} onChange={event => setQuery(event.target.value)} className="search-field py-3" placeholder="বই বা লেখকের নাম লিখুন" />
       </div>
-      <p className="mt-6 text-sm text-[var(--muted)]">{normalized ? `“${query}” এর জন্য ${results.length}টি ফলাফল` : `সব বই দেখানো হচ্ছে — খুঁজতে শুরু করুন`}</p>
+      <p className="mt-6 text-sm text-[var(--muted)]">{normalized ? `“${query}” এর জন্য ${toBnDigits(results.length)}টি ফলাফল` : `সব বই দেখানো হচ্ছে — খুঁজতে শুরু করুন`}</p>
       <div className="mt-7 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
         {results.map(book => <BookCard key={book.id} book={book} />)}
       </div>

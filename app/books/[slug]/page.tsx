@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 import { CoverArt } from "@/components/BookCard";
 import { ListenButton } from "@/components/ListenButton";
 import { getBookById } from "@/lib/supabase/queries";
+import { getCurrentUserProfile } from "@/lib/auth/profile";
 
 export default async function BookDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const book = await getBookById(slug);
+  const [book, current] = await Promise.all([getBookById(slug), getCurrentUserProfile()]);
   if (!book) notFound();
+  const isAuthenticated = Boolean(current);
 
   const playableRecordings = book.recordings;
   const hasRecordings = playableRecordings.length > 0;
@@ -24,6 +26,7 @@ export default async function BookDetailPage({ params }: { params: Promise<{ slu
               book={book}
               recordingId={heroRecording.id}
               narratorName={heroRecording.narrator?.display_name ?? "অজানা"}
+              isAuthenticated={isAuthenticated}
             />
           ) : (
             <div className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--maroon)]/40 py-3 text-sm font-bold text-white/80 cursor-not-allowed">
@@ -54,7 +57,7 @@ export default async function BookDetailPage({ params }: { params: Promise<{ slu
                 <div key={recording.id} className="flex items-center gap-4 rounded-2xl border border-[var(--line)] bg-[var(--cream)] p-4">
                   <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#bd8a61] text-xs font-bold text-white">{name.slice(0, 2)}</div>
                   <div className="min-w-0 flex-1"><p className="text-sm font-bold">{name}</p></div>
-                  <ListenButton book={book} recordingId={recording.id} narratorName={name} compact />
+                  <ListenButton book={book} recordingId={recording.id} narratorName={name} isAuthenticated={isAuthenticated} compact />
                 </div>
               );
             })}

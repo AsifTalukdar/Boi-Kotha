@@ -1,15 +1,11 @@
 import { getRequests } from "@/lib/supabase/request_queries";
+import { getCurrentUserProfile } from "@/lib/auth/profile";
 import { RequestsClient } from "./RequestsClient";
-import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
 export default async function RequestsPage() {
-  const requests = await getRequests();
+  const [requests, current] = await Promise.all([getRequests(), getCurrentUserProfile()]);
 
-  return (
-    <Suspense fallback={<div className="p-8 text-center">লোড হচ্ছে...</div>}>
-      <RequestsClient initialRequests={requests} />
-    </Suspense>
-  );
+  return <RequestsClient initialRequests={requests} isAuthenticated={Boolean(current)} />;
 }
