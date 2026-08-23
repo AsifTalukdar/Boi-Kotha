@@ -28,8 +28,16 @@ export function FavoriteButton({ bookId, initialFavorited = false, className = "
   return (
     <button type="button" onClick={onClick} disabled={isPending}
       aria-label={favorited ? "পছন্দ থেকে সরান" : "পছন্দে রাখুন"} aria-pressed={favorited}
+<<<<<<< HEAD
       className={`rounded-full bg-black/25 p-2 backdrop-blur-sm transition hover:bg-black/40 disabled:opacity-60 ${favorited ? "text-red-400" : "text-white"} ${className}`}>
       <Icon name="heart" size={15} />
     </button>
   );
 }
+=======
+      className={`rounded-full bg-black/25 p-2 backdrop-blur-sm transition hover:bg-black/40 ${favorited ? "text-red-400" : "text-white"} ${className}`}>
+      <Icon name="heart" size={15} />
+    </button>
+  );
+}
+>>>>>>> 2ab7aa76f7999d2438f175506db4e436eba6a695
