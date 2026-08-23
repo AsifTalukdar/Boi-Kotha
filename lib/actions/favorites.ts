@@ -18,8 +18,4 @@ export async function toggleFavorite(bookId: string, isFavorited: boolean) {
   }
   revalidatePath("/saved");
   return { error: null };
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 2ab7aa76f7999d2438f175506db4e436eba6a695
