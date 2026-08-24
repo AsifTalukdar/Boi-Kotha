@@ -13,6 +13,7 @@ type PlayerContextValue = {
   toggle: () => void;
   pause: () => void;
   cycleSpeed: () => void;
+  clear: () => void;
 };
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
@@ -32,9 +33,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const toggle = () => setIsPlaying((value) => !value);
   const pause = () => setIsPlaying(false);
   const cycleSpeed = () => setSpeed((value) => (value === "1x" ? "1.25x" : value === "1.25x" ? "1.5x" : "1x"));
+  const clear = () => {
+    setCurrentTrack(null);
+    setIsPlaying(false);
+  };
 
   return (
-    <PlayerContext.Provider value={{ currentTrack, isPlaying, speed, play, toggle, pause, cycleSpeed }}>
+    <PlayerContext.Provider value={{ currentTrack, isPlaying, speed, play, toggle, pause, cycleSpeed, clear }}>
       {children}
     </PlayerContext.Provider>
   );

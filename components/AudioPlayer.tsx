@@ -59,7 +59,7 @@ function ProgressBar({ audioRef, duration }: { audioRef: React.RefObject<HTMLAud
 }
 
 export function AudioPlayer() {
-  const { currentTrack, isPlaying, speed, toggle, pause, cycleSpeed } = usePlayer();
+  const { currentTrack, isPlaying, speed, toggle, pause, cycleSpeed, clear } = usePlayer();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [duration, setDuration] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -149,6 +149,9 @@ export function AudioPlayer() {
         <ProgressBar audioRef={audioRef} duration={duration} />
         <button type="button" onClick={cycleSpeed} aria-label={`গতি: ${speed}`} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--muted)]">
           {speed}
+        </button>
+        <button type="button" onClick={clear} aria-label="বন্ধ করুন" className="flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[var(--muted)] hover:bg-gray-200 hover:text-black">
+          <Icon name="close" size={17} />
         </button>
       </div>
     </div>
