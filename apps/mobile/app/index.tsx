@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet, Text, View, FlatList, ActivityIndicator, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import MiniPlayer from '../components/MiniPlayer';
 
-// Define a placeholder type based on what we might expect from public.books
 type Book = {
   id: string;
-  title: string;
-  author: string;
-  cover_url: string;
+  title?: string;
+  title_bn?: string;
+  author?: string;
+  author_bn?: string;
+  cover_url?: string;
+  cover_color?: string;
 };
 
 export default function Home() {
@@ -25,48 +27,56 @@ export default function Home() {
       const { data, error } = await supabase
         .from('books')
         .select('*')
-        .limit(10);
+        .limit(20);
         
       if (error) {
-        console.error('Error fetching books:', error);
-      } else {
+        console.warn('Error fetching books from Supabase:', error);
+      } else if (data && data.length > 0) {
         setBooks(data as Book[]);
       }
     } catch (err) {
-      console.error('Unexpected error:', err);
+      console.warn('Unexpected error fetching books:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const renderBookItem = ({ item }: { item: Book }) => (
-    <TouchableOpacity style={styles.bookCard}>
-      <View style={styles.coverPlaceholder}>
-        {/* Placeholder for cover image if cover_url doesn't exist */}
-        <Text style={styles.coverText}>📖</Text>
-      </View>
-      <View style={styles.bookInfo}>
-        <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.bookAuthor} numberOfLines={1}>{item.author}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderBookItem = ({ item }: { item: Book }) => {
+    const title = item.title_bn || item.title || 'বইয়ের নাম';
+    const author = item.author_bn || item.author || 'লেখক';
+    const bgColor = item.cover_color || '#0d9488';
+
+    return (
+      <TouchableOpacity style={styles.bookCard} activeOpacity={0.8}>
+        <View style={[styles.coverPlaceholder, { backgroundColor: bgColor }]}>
+          <Text style={styles.coverText}>📖</Text>
+        </View>
+        <View style={styles.bookInfo}>
+          <Text style={styles.bookTitle} numberOfLines={2}>{title}</Text>
+          <Text style={styles.bookAuthor} numberOfLines={1}>{author}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Boi-Kotha</Text>
-          <Text style={styles.headerSubtitle}>Discover Bengali Audiobooks</Text>
+          <Text style={styles.headerTitle}>বই-কথা (Boi-Kotha)</Text>
+          <Text style={styles.headerSubtitle}>বাংলা অডিওবুক প্ল্যাটফর্ম</Text>
         </View>
 
         {loading ? (
           <View style={styles.centerContent}>
-            <ActivityIndicator size="large" color="#007bff" />
+            <ActivityIndicator size="large" color="#0d9488" />
+            <Text style={styles.loadingText}>বই লোড হচ্ছে...</Text>
           </View>
         ) : books.length === 0 ? (
           <View style={styles.centerContent}>
-            <Text style={styles.emptyText}>No books found.</Text>
+            <Text style={styles.emptyIcon}>📚</Text>
+            <Text style={styles.emptyText}>কোনো বই পাওয়া যায়নি</Text>
           </View>
         ) : (
           <FlatList
@@ -74,12 +84,16 @@ export default function Home() {
             keyExtractor={(item) => item.id}
             renderItem={renderBookItem}
             contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
           />
         )}
       </View>
       
       {/* Sticky Player at the bottom */}
-      <MiniPlayer title="Chander Pahar" author="Bibhutibhushan Bandyopadhyay" isPlaying={false} />
+      <MiniPlayer 
+        title="চাঁদের পাহাড়" 
+        author="বিভূতিভূষণ বন্দ্যোপাধ্যায়" 
+      />
     </SafeAreaView>
   );
 }
@@ -87,7 +101,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
   },
   container: {
     flex: 1,
@@ -96,61 +110,72 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f3f5',
+    borderBottomColor: '#f3f4f6',
+    backgroundColor: '#ffffff',
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#212529',
+    color: '#111827',
   },
   headerSubtitle: {
-    fontSize: 16,
-    color: '#6c757d',
-    marginTop: 4,
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 2,
   },
   centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
   emptyText: {
     fontSize: 16,
-    color: '#6c757d',
+    color: '#6b7280',
   },
   listContent: {
     padding: 16,
   },
   bookCard: {
     flexDirection: 'row',
-    marginBottom: 16,
-    backgroundColor: '#f8f9fa',
+    marginBottom: 12,
+    backgroundColor: '#f9fafb',
     borderRadius: 12,
     padding: 12,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
   },
   coverPlaceholder: {
     width: 60,
-    height: 90,
-    backgroundColor: '#e9ecef',
+    height: 80,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   coverText: {
-    fontSize: 24,
+    fontSize: 26,
   },
   bookInfo: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 14,
     justifyContent: 'center',
   },
   bookTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#212529',
+    color: '#1f2937',
     marginBottom: 4,
   },
   bookAuthor: {
     fontSize: 14,
-    color: '#495057',
+    color: '#6b7280',
   },
 });

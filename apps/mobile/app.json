@@ -2,7 +2,7 @@
   "expo": {
     "name": "Boi-Kotha",
     "slug": "boi-kotha",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "scheme": "boikotha",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -18,11 +18,14 @@
     },
     "android": {
       "package": "com.boikotha.app",
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundColor": "#0d9488"
       },
       "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },

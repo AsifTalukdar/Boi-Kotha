@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Play, Pause, SkipForward } from 'lucide-react-native';
 import { Audio } from 'expo-av';
@@ -7,54 +7,70 @@ interface MiniPlayerProps {
   title?: string;
   author?: string;
   isPlaying?: boolean;
-  audioUrl?: string; // URL of the audio file to play
+  audioUrl?: string;
 }
 
 export default function MiniPlayer({
-  title = 'Not Playing',
-  author = 'Unknown',
-  audioUrl = 'https://cdn.example.com/sample-audio.mp3',
+  title = 'Chander Pahar',
+  author = 'Bibhutibhushan Bandyopadhyay',
+  audioUrl,
 }: MiniPlayerProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const isMountedRef = useRef(true);
 
-  // Load the sound when component mounts or audioUrl changes
   useEffect(() => {
-    let isMounted = true;
-    const loadSound = async () => {
-      if (sound) {
-        await sound.unloadAsync();
-        setSound(null);
-      }
-      try {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: audioUrl },
-          { shouldPlay: false, staysActiveInBackground: true }
-        );
-        if (isMounted) {
-          setSound(newSound);
-        }
-      } catch (e) {
-        console.error('Error loading audio', e);
-      }
-    };
-    loadSound();
+    isMountedRef.current = true;
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
       if (sound) {
-        sound.unloadAsync();
+        sound.unloadAsync().catch(() => {});
       }
     };
-  }, [audioUrl]);
+  }, [sound]);
 
   const togglePlay = async () => {
-    if (!sound) return;
-    if (playing) {
-      await sound.pauseAsync();
-      setPlaying(false);
-    } else {
-      await sound.playAsync();
-      setPlaying(true);
+    try {
+      if (playing && sound) {
+        await sound.pauseAsync();
+        if (isMountedRef.current) setPlaying(false);
+        return;
+      }
+
+      if (sound) {
+        await sound.playAsync();
+        if (isMountedRef.current) setPlaying(true);
+        return;
+      }
+
+      // If no valid audio URL provided, just simulate toggle safely
+      if (!audioUrl || audioUrl.includes('example.com')) {
+        if (isMountedRef.current) setPlaying(!playing);
+        return;
+      }
+
+      setIsLoading(true);
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+      });
+
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: audioUrl },
+        { shouldPlay: true, staysActiveInBackground: false }
+      );
+
+      if (isMountedRef.current) {
+        setSound(newSound);
+        setPlaying(true);
+      }
+    } catch (e) {
+      console.warn('Audio playback error:', e);
+      if (isMountedRef.current) setPlaying(false);
+    } finally {
+      if (isMountedRef.current) setIsLoading(false);
     }
   };
 
@@ -71,15 +87,20 @@ export default function MiniPlayer({
           </Text>
         </View>
         <View style={styles.controls}>
-          <TouchableOpacity style={styles.button} onPress={togglePlay}>
+          <TouchableOpacity 
+            style={styles.button} 
+            onPress={togglePlay} 
+            disabled={isLoading}
+            activeOpacity={0.7}
+          >
             {playing ? (
-              <Pause size={24} color="#000" />
+              <Pause size={24} color="#0d9488" />
             ) : (
-              <Play size={24} color="#000" fill="#000" />
+              <Play size={24} color="#0d9488" fill="#0d9488" />
             )}
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={() => { /* skip forward placeholder */ }}>
-            <SkipForward size={24} color="#000" />
+          <TouchableOpacity style={styles.button} activeOpacity={0.7}>
+            <SkipForward size={24} color="#4b5563" />
           </TouchableOpacity>
         </View>
       </View>
@@ -89,15 +110,20 @@ export default function MiniPlayer({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#ffffff',
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-    paddingBottom: 24,
+    borderTopColor: '#e5e7eb',
+    paddingBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 5,
   },
   progressPlaceholder: {
-    height: 2,
-    backgroundColor: '#007bff',
-    width: '30%',
+    height: 3,
+    backgroundColor: '#0d9488',
+    width: '35%',
   },
   content: {
     flexDirection: 'row',
@@ -113,17 +139,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#212529',
+    color: '#111827',
   },
   author: {
-    fontSize: 14,
-    color: '#6c757d',
+    fontSize: 13,
+    color: '#6b7280',
     marginTop: 2,
   },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
   },
   button: {
     padding: 8,
